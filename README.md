@@ -1,2 +1,2 @@
 # Mavis
-JavaScript Mathematical visualizer
+JavaScript Mathematical visualization library
