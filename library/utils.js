@@ -1,7 +1,14 @@
 const {
 	ceil,
 	floor,
-	round
+	round,
+	sign,
+	sin,
+	cos,
+	tan,
+	PI,
+	sqrt,
+	atan2
 } = Math,
 	CENTRE = [0, 0],
 	LARGE = {
@@ -28,6 +35,9 @@ const {
 		"height": "100%"
 	}
 
+function dist(x1, y1, x2 = 0, y2 = 0) {
+	return sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+}
 function map(n, start1, stop1, start2, stop2) {
 	return newval = (n - start1) / (stop1 - start1) * (stop2 - start2) + start2;
 }
@@ -156,7 +166,7 @@ function initCanvas (th) {
 	ctx.imageSmoothingEnabled = false
 	// shift to centre / specified location
 	var x_min = Manimation.x_min || th.x_min,
-		y_min = Manimation.y_min || th.y_min,
+	y_min = Manimation.y_min || th.y_min,
 		x_max = Manimation.x_max || th.x_max,
 		y_max = Manimation.y_max || th.y_max,
 		x_scaling = th.x_scaling || th.x_tick_frequency || 1,
@@ -164,19 +174,20 @@ function initCanvas (th) {
 		w = parseInt(ctx.canvas.width)  / scaleX,
 		h = parseInt(ctx.canvas.height) / scaleY;
 	ctx.scale(scaleX, scaleY)
+	// ctx.save();
 	if (th.origin) {
 		ctx.translate(
 			(th.origin[0] + w / 2) * x_scaling,
 			(-th.origin[1] + h / 2) * y_scaling
-		)
-	}else {
+			)
+		} else {
 		ctx.translate(
-			(-x_min) * x_scaling,
+			-x_min * x_scaling,
 			(h + y_min) * y_scaling
-		);
-	}
-	// draws background
-	ctx.beginPath();
+			);
+		}
+		// draws background
+		ctx.beginPath();
 	ctx.fillStyle = th.background_color;
 	if (ctx.fillStyle == "transparent") {
 		ctx.clearRect(
@@ -191,15 +202,14 @@ function initCanvas (th) {
 			-h,
 			w * 2,
 			h * 2
-		);
-	}
-
+			);
+		}
 	return ctx;
 }
 
 function range(a, b, dx = 1) {
 	var arr = []
-	for (var i = a; i <= b * Math.sign(dx); i+= dx) {
+	for (var i = a; i <= b * sign(dx); i+= dx) {
 		arr.push(i);
 	}
 	return arr;

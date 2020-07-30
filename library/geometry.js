@@ -23,7 +23,7 @@
 		remove () {
 			Manimation.container.removeChild(this.canvas);
 		}
-		
+
 		shiftBy (x, y) {
 			for (var i = 0; i < this.positions.length; i += 2) {
 				this.positions[i] += x;//x-axis
@@ -112,9 +112,8 @@
 		}
 		add () {
 			var ctx = initCanvas(this);
-			ctx.beginPath();
-			line(
-				ctx, this.positions[0], this.positions[1],
+			line(ctx,
+				this.positions[0], this.positions[1],
 				this.positions[2], this.positions[3]
 			)
 			if (this.stroke){
@@ -125,6 +124,43 @@
 
 		}
 	}
+
+	class Arrow extends Line {
+		head_size = 0.2
+		constructor (config = {}) {
+			super(config);
+			this.auto_scale_head = getDefined(config.auto_scale_head, false);
+			this.x1 = getDefined(config.x1, 0);
+			this.y1 = getDefined(config.y1, 0);
+			this.x2 = getDefined(config.x2, 1);
+			this.y2 = getDefined(config.y2, 1);
+			if (this.auto_scale_head) {
+				this.head_size = dist(this.x1, this.y1, this.x2, this.y2) * 1 / 8;
+			}
+			this.head_size = getDefined(config.head_size, this.head_size);
+		}
+
+		add (init = true) {
+			if (init) initCanvas(this);
+			var ctx = this.canvas.getContext("2d");
+			ctx.fillStyle = this.fill_color;
+			ctx.strokeStyle = this.stroke_color;
+			ctx.lineWidth = this.stroke_width;
+			line(ctx, this.x1, this.y1, this.x2 - this.head_size / 2 * sin(this.getAngle()), this.y2 - this.head_size / 2 * cos(this.getAngle()));
+			ctx.stroke();
+			// debugger
+			pointer (ctx, this.x2, -this.y2,
+				this.getAngle() + PI / 2,
+				this.head_size,
+				this.fill_color
+			);
+		}
+
+		getAngle() {
+			return atan2((this.x1 - this.x2) , (this.y1 - this.y2));
+		}
+	}
 	window.Rectangle = Rectangle;
 	window.Line = Line;
+	window.Arrow = Arrow;
 })();

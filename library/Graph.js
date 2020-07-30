@@ -34,8 +34,9 @@ class NumberLine {
 		if (this.orientation == "vertical") {
 			x_product = 0;
 			y_product = 1;
+			// debugger
 		}
-
+		ctx.beginPath();
 		ctx.strokeStyle = this.axis_color;
 		ctx.lineWidth = this.axis_width;
 		
@@ -66,6 +67,7 @@ class NumberLine {
 					-this.tick_width / 2, path,
 					+this.tick_width / 2, path
 				);
+				// debugger
 			}
 			ctx.stroke();
 		}
@@ -81,15 +83,18 @@ class NumberLine {
 			ctx.save();
 			ctx.scale(1/scaleX, 1/scaleY)
 			ctx.fillStyle = this.labeled_nums_color;
-			ctx.font = "22px serif";
+			ctx.font = "22px sans";
 			var tf = this.tick_frequency;
 			for (var path = start; path <= end; path += tf) {
 				var index = path - start + padding;
 				if (path == 0 && this.exclude_zero) continue;
-				var num = (this.labeled_nums[index] == undefined ? "" : this.labeled_nums[index]).toFixed(this.rounding);
+				var num = (this.labeled_nums[index] == undefined ? 0 : this.labeled_nums[index]).toFixed(this.rounding);
 				var width = ctx.measureText(num).width;
 				console.log(num);
-				ctx.fillText(num, path * scaleX - width / 2, 32);
+				ctx.fillText(num,
+					(path * scaleX - width / 2) * x_product + (-width - this.tick_width / 1.5 * scaleX)*  y_product,
+					-(path * scaleX - 8) * y_product + 32 * x_product
+				);
 			}
 			ctx.restore();
 		}
@@ -100,16 +105,16 @@ class NumberLine {
 			var sx = this.start - this.tick_width / 4;
 			var sy = this.end + this.tick_width / 4;
 			pointer(ctx,
-				sx * x_product, sx * y_product,
-				Math.PI + Math.PI / 2 * y_product,
+				sx * x_product, -sx * y_product,
+				Math.PI - Math.PI / 2 * y_product,
 				this.tick_width / 1.5,
 				GREY
 				);
 				
 			// end tip
 			pointer(ctx,
-				sy * x_product, sy * y_product,
-				Math.PI / 2 * y_product,
+				sy * x_product, -sy * y_product,
+				-Math.PI / 2 * y_product,
 				this.tick_width / 1.5,
 				GREY
 			);
@@ -122,6 +127,7 @@ class Graph{
 	 * Create a graph
 	 * @param {Object} [config={}] configuration of graph
 	 */
+	totalRotation = 0;
 	constructor (config = {}) {
 		this.x_min                = getDefined(config.x_min, ceil(Manimation.x_min));
 		this.x_max                = getDefined(config.x_max, floor(Manimation.x_max));
@@ -198,38 +204,37 @@ class Graph{
 		if (init){
 			initCanvas(this);
 		}
-		this.x_axis.add(false);
-		this.y_axis.add(false);
 		var ctx = this.canvas.getContext("2d"),
-			x_min = this.x_min,
-			x_max = this.x_max,
-			y_min = this.y_min,
-			y_max = this.y_max,
-			xtf   = this.x_tick_frequency,
-			ytf   = this.y_tick_frequency;
-
+		x_min = this.x_min,
+		x_max = this.x_max,
+		y_min = this.y_min,
+		y_max = this.y_max,
+		xtf   = this.x_tick_frequency,
+		ytf   = this.y_tick_frequency;
+		ctx.rotate(this.totalRotation)
+		
 		
 		// grids
 		if (this.include_grid) {
 			ctx.beginPath();
 			ctx.strokeStyle = this.grid_color;
 			ctx.lineWidth   = this.grid_line_width;
-
+			
 			//x grid line
 			for (var start = x_min; start <= x_max; start += xtf) {
 				line(ctx,
 					start, y_max,
 					start, y_min
-				);
-				ctx.stroke();
-			}
-			
-			//y grid line
-			for (var start = y_min; start <= y_max; start += ytf) {
-				line(ctx,
-					x_min, start,
+					);
+					ctx.stroke();
+				}
+				
+				//y grid line
+				for (var start = y_min; start <= y_max; start += ytf) {
+					line(ctx,
+						x_min, start,
 					x_max, start
-				);
+					);
 				ctx.stroke();
 			}
 			ctx.closePath();
@@ -239,7 +244,7 @@ class Graph{
 		if (this.include_sub_grid) {
 			ctx.beginPath();
 			ctx.strokeStyle = this.sub_grid_color;
-			ctx.lineWidth = this.sub_grid_width_line_width;
+			ctx.lineWidth = this.sub_grid_line_width;
 			var x_begin = x_min + xtf / 2;
 			var x_end = x_max - xtf / 2;
 			var y_begin = y_min + ytf / 2;
@@ -251,7 +256,7 @@ class Graph{
 				);
 				ctx.stroke();
 			}
-
+			
 			for (var start = y_begin; start <= y_end; start += ytf) {
 				line(ctx,
 					x_min, start,
@@ -261,195 +266,17 @@ class Graph{
 			}
 			ctx.closePath();
 		}
+		this.x_axis.add(false);
+		this.y_axis.add(false);
+	}
 
-		// x_ tick lines
-		// if (this.x_tick_line) {
-		// 	ctx.beginPath();
-		// 	ctx.strokeStyle = this.axis_color;
-		// 	ctx.lineWidth = this.axis_width;
-		// 	ctx.fillStyle = "#fff"
-		// 	var p_start = this.include_tip ? x_min + 1 : x_min;
-		// 	var p_end   = this.include_tip ? x_max - 1 : x_max;
-		// 	var center = this.y_tick_line ? xtf : 0;
-		// 	for (var path = center; path <= p_end; path += xtf) {
-		// 		line(ctx,
-		// 			path, -this.tick_width / 2,
-		// 			path, this.tick_width / 2
-		// 		);
-		// 		ctx.stroke();
-		// 	}
+	rotate(ang = 0) {
+		this.totalRotation += ang;
+	}
 
-		// 	for (var path = -center; path >= p_start; path -= xtf) {
-		// 		line(ctx,
-		// 			path, -this.tick_width / 2,
-		// 			path, this.tick_width / 2
-		// 		);
-		// 		ctx.stroke();
-		// 	}
-		// }
-		
-		// if (this.y_tick_line) {
-		// 	var p_start = this.include_tip ? y_min + 1 : y_min;
-		// 	var p_end = this.include_tip ? y_max - 1 : y_max;
-		// 	for (var path = ytf; path <= p_end; path += ytf) {
-		// 		line(ctx,
-		// 			-this.tick_width / 2, path,
-		// 			this.tick_width / 2, path
-		// 		);
-		// 		ctx.stroke();
-		// 	}
-		// 	for (var path = -ytf; path >= p_start; path -= ytf) {
-		// 		line(ctx,
-		// 			-this.tick_width / 2, path,
-		// 			this.tick_width / 2, path
-		// 		);
-		// 		ctx.stroke();
-		// 	}
-		// 	ctx.closePath();
-		// }
-
-		// // lables numbers x
-
-		// if ((this.x_labeled_nums || [])[0] != undefined){
-		// 	var p_start = Math.floor(this.include_tip ? x_min + 1 : x_min);
-		// 	var p_end = Math.floor((this.include_tip || this.x_axis_label != "") ? x_max - 1 : x_max);
-		// 	var scaleX = Manimation.globalScaleRatio[0];
-		// 	var scaleY = Manimation.globalScaleRatio[1];
-		// 	ctx.save();
-		// 	ctx.scale(1/scaleX, 1/scaleY)
-		// 	ctx.fillStyle = this.x_labeled_nums_color;
-		// 	ctx.font = "22px serif";
-		// 	for (var path = p_start; path <= p_end; path += xtf) {
-		// 		var index = path -p_start;
-		// 		var num = (this.x_labeled_nums[index] == undefined ? "" : this.x_labeled_nums[index]).toFixed(this.x_rounding);
-		// 		var width = ctx.measureText(num).width;
-		// 		if (path == 0){
-		// 			p_end++
-		// 			if (!this.exclude_zero) {
-		// 				ctx.fillText(num, 5, 22)
-		// 			}
-		// 		} else {
-		// 			console.log(num);
-		// 			if (path != 0) {
-		// 				ctx.fillText(num, path * scaleX - width / 2, 32)
-		// 			}
-		// 		}
-		// 	}
-		// 	ctx.restore();
-		// }
-
-		// if ((this.y_labeled_nums || [])[0] != undefined){
-		// 	var p_start = this.include_tip ? y_min + 1 : y_min;
-		// 	var p_end = (this.include_tip || this.y_axis_label != "") ? y_max - 1 : y_max;
-		// 	var padding = 0;
-		// 	var scaleX = Manimation.globalScaleRatio[0];
-		// 	var scaleY = Manimation.globalScaleRatio[1];
-		// 	ctx.save();
-		// 	ctx.scale(1/scaleX, 1/scaleY)
-		// 	ctx.fillStyle = this.y_labeled_nums_color;
-		// 	ctx.font = "22px serif";
-		// 	for (var path = p_start; path <= p_end; path += ytf) {
-		// 		var index = path + -p_start;
-		// 		var num = (this.y_labeled_nums[index] == undefined ? "" : this.y_labeled_nums[index]).toFixed(this.y_rounding);
-		// 		var width = ctx.measureText(num).width;
-		// 		if (path == 0){
-		// 			p_end++
-		// 			if (!this.exclude_zero && this.x_labeled_nums[0] == undefined) {
-		// 				ctx.fillText(num, 5, 22)
-		// 			}
-		// 		}
-		// 		if (path != 0) {
-		// 			ctx.fillText(num, -width - this.tick_width * scaleX, -path * scaleY + 5)
-		// 		}
-		// 	}
-		// 	ctx.restore();
-		// }
-
-		// //axis
-		// ctx.beginPath();
-		// ctx.strokeStyle = this.axis_color;
-		// ctx.lineWidth = this.axis_width;
-		// line(ctx,
-		// 	0, y_max,
-		// 	0, y_min
-		// );
-
-		// ctx.stroke();
-		// line(ctx,
-		// 	x_min, 0,
-		// 	x_max, 0
-		// );
-
-		// ctx.stroke();
-		// ctx.closePath();
-
-
-
-		// //tip
-		// if (this.include_tip) {
-
-		// 	// top tip
-		// 	pointer(ctx,
-		// 		0, -y_max - this.tick_width / 3, // (x, y)
-		// 		-Math.PI / 2, // rotation
-		// 		this.tick_width / 1.5, // width
-		// 		GREY // color
-		// 	);
-
-		// 	// bottom tip
-		// 	pointer(ctx,
-		// 		0, -y_min + this.tick_width / 3,
-		// 		Math.PI / 2,
-		// 		this.tick_width / 1.5,
-		// 		GREY
-		// 	);
-
-		// 	// left tip
-		// 	pointer(ctx,
-		// 		x_min - this.tick_width / 3, 0,
-		// 		Math.PI,
-		// 		this.tick_width / 1.5,
-		// 		GREY
-		// 	);
-
-		// 	// right tip
-		// 	pointer(ctx,
-		// 		x_max + this.tick_width / 3, 0,
-		// 		0,
-		// 		this.tick_width / 1.5,
-		// 		GREY
-		// 	);
-		// }
-		window.ctx = ctx;
-		if (this.x_axis_label != "") {
-			// ctx.font = ctx.font = "italic normal 35px serif";
-			// var text_height = parseInt(40 / 1.5);
-			// ctx.fillStyle = WHITE;
-			// ctx.fillText(this.x_axis_label, text_height, -y_max)
-			// ctx.fillText(this.y_axis_label, x_max, text_height * 1.5)
-			var img = new Image();
-			texToImg("log(x^3)").then(response => response.text())
-			.then(function(xml) {
-				var svg = xml;
-				window.svg = svg;
-				var div = document.createElement("div");
-				div.innerHTML = svg;
-				var svgNode = div.getElementsByTagName("svg")[0];
-				// debugger
-				var g = svgNode.getElementsByTagName("defs")[0];
-				g.setAttribute("fill","#fff");
-				g.setAttribute("transform","scale(2)");
-
-				var src = 'data:image/svg+xml;base64,' + window.btoa(unescape(encodeURIComponent(svgNode.outerHTML)));
-				img.src = src;
-				img.setAttribute("SameSite", "none")
-				img.setAttribute('crossOrigin', '');
-				ctx.drawImage(img, -100, -200);
-				window.img = img;
-			});
-			// var c = document.createElement("canvas").getContext("2d");
-			// c.drawImage(img, 0, 0);
-			// var dat = c.getImageData(0, 0, 100, 100)
+	remove() {
+		if (Manimation.container.hasChildNodes(this.canvas)) {
+			Manimation.container.removeChild(this.canvas);
 		}
 	}
 }
