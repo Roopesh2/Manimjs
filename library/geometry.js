@@ -1,50 +1,130 @@
-class Square {
-	x;
-	y;
-	w;
-	h;
-	v1;
-	v2;
-	v3;
-	v4;
-	constructor (x, y, w, h) {
-		this.x = x;
-		this.y = y;
-		this.w = w;
-		this.h = h;
-		this.v1 = {x : x, y: y};
-		this.v2 = {x : x + w, y: y};
-		this.v3 = {x : x + w, y: y + h};
-		this.v4 = {x : x, y: y + h};
-		this.renderingContext = document.createElement("canvas");
-		Mavis.container.appendChild(this.renderingContext);
-		this.renderingContext.id = Math.round(Math.random() * 1000000000).toString(16);
-	}
-
-	shiftTo (x, y) {
-		this.x = x;
-		this.y = y;
-	}
-
-	shiftBy (x, y) {
-		this.x += x;
-		this.y += y;
-	}
-	creationMethod (time) { // time in 0-1
-		var xy = [];
-		if (time >= 0 && 1/4 >= time) {
-			xy[0] = map(time, 0, 1/4, this.v1.x, this.v2.x);
-			xy[1] = map(time, 0, 1/4, this.v1.y, this.v2.y);
-		} else if (time >= 1/4 && 1/2 >= time) {
-			xy[0] = map(time, 1/4, 1/2, this.v2.x, this.v3.x);
-			xy[1] = map(time, 1/4, 1/2, this.v2.y, this.v3.y);
-		} else if (time >= 1/2 && 3/4 >= time) {
-			xy[0] = map(time, 1/2, 3/4, this.v3.x, this.v4.x);
-			xy[1] = map(time, 1/2, 3/4, this.v3.y, this.v4.y);
-		} else if (time >= 3/4 && 1 >= time) {
-			xy[0] = map(time, 3/4, 1, this.v4.x, this.v1.x);
-			xy[1] = map(time, 3/4, 1, this.v4.y, this.v1.y);
+(function(){
+	class TwoDObject {
+		constructor (config = {}) {
+			this.background_color  = config.background_color || "transparent",
+			this.stroke = config.stroke == undefined ? true : config.stroke,
+			this.fill = config.fill == undefined ? true : config.fill,
+			this.fill_color = config.fill_color || YELLOW_C,
+			this.stroke_color = config.stroke_color || YELLOW_C,
+			this.stroke_width = config.stroke_width || 0.04;
+			this.origin = config.origin || Manimation.origin;
+			this.xPos = [];
+			this.yPos = [];
+			this.canvas = getCanvas();
 		}
-		return xy;
+
+		digestConfig () {
+			for (var i = 0; i < this.positions.length; i += 2) { // x-pos
+				this.xPos.push(this.positions[i]);
+				this.yPos.push(this.positions[i + 1]);
+			}
+		}
+
+		remove () {
+			Manimation.container.removeChild(this.canvas);
+		}
+		
+		shiftBy (x, y) {
+			for (var i = 0; i < this.positions.length; i += 2) {
+				this.positions[i] += x;//x-axis
+				this.positions[i + 1] += y;//y-axis
+			}
+		}
+
+		shiftTo (x, y) {
+			if (this.xPos[0] === undefined) {
+				this.digestConfig();
+			}
+			var xMin = Math.min(...this.xPos);
+			var yMin = Math.min(...this.yPos);
+			var xComp = x - xMin;
+			var yComp = y - yMin;
+
+			for (var i = 0; i < this.positions.length; i += 2) {
+				this.positions[i] += xComp;//x-axis
+				this.positions[i + 1] += yComp;//y-axis
+			}
+		}
+
+		scale (x, y) {
+			y = y == undefined ? x : y;
+			for (var i = 0; i < this.positions.length; i += 2) {
+				this.positions[i] * x;//x-axis
+				this.positions[i + 1] * y;//y-axis
+			}
+		}
+
 	}
-}
+
+
+	class Rectangle extends TwoDObject {
+		constructor(config = {}, graph = {}) {
+			super(config);
+			this.width = config.width || 1;
+			this.height = config.height || 1;
+			this.positions = [config.x || 0, config.y || 0];
+			this.boundedRect = this.positions.concat(
+				config.x + this.width,
+				config.y + this.height
+			);
+		}
+		add () {
+			var ctx = initCanvas(this);
+
+			// draws Rectangle
+			var width = this.width;
+			var height = this.height;
+			var x = this.positions[0];
+			var y = -this.positions[1];
+			ctx.beginPath();
+			ctx.rect(
+				x, y,
+				width, height
+			);
+			if (this.stroke){
+				ctx.strokeStyle = this.stroke_color;
+				ctx.lineWidth = this.stroke_width;
+				ctx.stroke();
+			}
+			if (this.fill){
+				ctx.fillStyle = this.fill_color;
+				ctx.fill();
+			}
+		}
+	}
+
+	class Line extends TwoDObject {
+		constructor (config = {}, graph = {}) {
+			super(config);
+			
+			config.x1 = config.x1 || 0;
+			config.y1 = config.y1 || 0;
+			config.x2 = config.x2 || 1;
+			config.y2 = config.y2 || 1;
+			this.positions = [
+				config.x1, config.y1, // x1, y1
+				config.x2, config.y2  // x2, y2
+			];
+			this.boundedRect = [
+				Math.min(config.x1, config.x2), Math.min(config.y1, config.y2),
+				Math.max(config.x1, config.x2), Math.max(config.y1, config.y2)
+			];
+		}
+		add () {
+			var ctx = initCanvas(this);
+			ctx.beginPath();
+			line(
+				ctx, this.positions[0], this.positions[1],
+				this.positions[2], this.positions[3]
+			)
+			if (this.stroke){
+				ctx.strokeStyle = this.stroke_color;
+				ctx.lineWidth = this.stroke_width;
+				ctx.stroke();
+			}
+
+		}
+	}
+	window.Rectangle = Rectangle;
+	window.Line = Line;
+})();

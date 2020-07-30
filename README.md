@@ -1,2 +1,2 @@
-# Mavis
+# Manimation
 JavaScript Mathematical visualization library
