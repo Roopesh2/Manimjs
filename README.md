@@ -1,2 +1,2 @@
-# Manimation
-JavaScript Mathematical visualization library
+# Manim
+Mathematical Aanimation library
